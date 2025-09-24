@@ -111,7 +111,7 @@ Q = \mathbb{E}_{r \sim R(\cdot | a)}[r] \\
 Q^* = \max_a Q(a) \\
 ```
 
-懊悔（regret）：拉动当前拉杆的动作$`a`$与最优拉杆的期望奖励差 （上帝视角，用来评估算法的好坏，算法的性能指标）
+懊悔（regret）：拉动当前拉杆的动作$`a`$与最优拉杆的期望奖励差 （上帝视角，用来评估算法的好坏，算法的性能指标，或者找到最优的收敛性）
 
 ```math
 R(a) = Q^* - Q(a)
@@ -201,6 +201,13 @@ Q \leq \hat{Q}_t(a) + \hat{U}_t(a), \text{with probability} \; 1 - p \\
 有 $`e^{-2n U^2} = p`$，$`p`$ 是超参，可以取 $`p = \frac{1}{t}`$，则
 
 > 相当于选择上限最大的，潜力最大的
+
+收敛性:
+
+```math
+\lim_{t \to \infty} \sigma_R \;\leq\; 8 \log t \sum_{a \mid \Delta_a > 0} \Delta_a
+```
+
 
 汤普森采样（Thompson sampling）：先假设拉动每根拉杆的奖励服从一个特定的概率分布，然后根据拉动每根拉杆的期望奖励来进行选择。
 
