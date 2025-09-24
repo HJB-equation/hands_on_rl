@@ -81,3 +81,133 @@ a = \arg\max_{a'} Q^\pi(s,a')
 eg. DQN: 神经网络逼近 Q 函数（经验回放 + 双网络）
 
 [Human-level control through deep reinforcement learning](https://www.nature.com/articles/nature14236)
+
+[Q-learning](https://link.springer.com/article/10.1007/BF00992698)
+
+### 02
+
+强化学习关注智能体和环境交互过程中的学习，这是一种试错型学习（trial-and-error learning）范式
+
+权衡 （因为环境动力学未知）：
+- Exploitation 执行能够获得已知最优收益的决策
+- Exploration 尝试更多可能的决策，不一定会是最优收益
+
+多臂老虎机（multi-armed bandit，MAB）：
+
+- 动作：K 个拉杆
+- 奖励：r 服从某个分布
+- 目标：T次内获得最大累计奖励
+
+```math
+\sum_{t=1}^T r_t \quad r_t \sim P(\cdot | a_t)
+```
+
+> 由于随机性存在，无法保证复刻的时候会得到同样的结果，所以考虑期望，这个是稳定的（大数定律）
+
+$`Q`$ 当前动作的期望奖励
+
+```math
+Q = \mathbb{E}_{r \sim R(\cdot | a)}[r] \\
+Q^* = \max_a Q(a) \\
+```
+
+懊悔（regret）：拉动当前拉杆的动作$`a`$与最优拉杆的期望奖励差 （上帝视角，用来评估算法的好坏，算法的性能指标）
+
+```math
+R(a) = Q^* - Q(a)
+```
+
+性能：
+
+如果选择了次优动作 $a$，我们就损失了一部分奖励：
+
+```math
+\Delta_a = Q^\star - Q(a)
+```
+
+这就是 **次优间隔 (suboptimality gap)**。
+
+Lai & Robbins 下界 （[Asymptotically efficient adaptive allocation rules](https://www.sciencedirect.com/science/article/pii/0196885885900028)）
+
+他们证明了一个基本极限：
+
+$$
+\lim_{T \to \infty} \frac{\sigma_R(T)}{\log T} \;\; \geq \; \sum_{a:\Delta_a>0} \frac{\Delta_a}{D_{\mathrm{KL}}\big(\mathcal{R}(r|a) \,\|\, \mathcal{R}^\star(r|a)\big)}
+$$
+
+解释：
+
+* $\mathcal{R}(r|a)$：动作 $a$ 的奖励分布。
+* $\mathcal{R}^\star(r|a)$：最优动作的奖励分布。
+* $D_{\mathrm{KL}}(\cdot \|\cdot)$：KL 散度，衡量两个分布的“可区分性”。
+* 含义：**如果一个次优动作和最优动作的分布太相似，就需要更多次探索来分辨它们 → 遗憾下界更高。**
+
+- $`\Delta_a`$ 决定了选错动作会损失多少奖励。
+- **KL 散度** 决定了我们多快能分辨出动作好坏。
+- Lai & Robbins 定理告诉我们：$`\mathcal{O}(\log T)`$ 是多臂赌博机的最优遗憾增长速度
+
+策略：
+
+- 探索（exploration）是指尝试拉动更多可能的拉杆，这根拉杆不一定会获得最大的奖励，但这种方案能够摸清楚所有拉杆的获奖情况。
+- 利用（exploitation）是指拉动已知期望奖励最大的那根拉杆，由于已知的信息仅仅来自有限次的交互观测，所以当前的最优拉杆不一定是全局最优的。
+
+$`\epsilon`$-贪心算法：（初始值全为1,是积极探索，全部为0是保守利用）
+
+评估过去的经验：$`\hat Q`$
+
+```math
+a_t =
+\begin{cases}
+\arg\max\limits_a \hat{Q}(a), & \text{with probability } 1-\epsilon, \\[6pt]
+U(0,|\mathcal{A}|), & \text{with probability } \epsilon.
+\end{cases}
+```
+
+性能（累积懊悔）：
+
+```math
+\sigma =
+\begin{cases}
+\propto T \cdot (Q^\prime - Q^*), & 1-\epsilon, \\[6pt]
+\;\;\geq\;\; \frac{\epsilon}{|\mathcal{A}|} \sum_{a \in \mathcal{A}} \Delta_a, & \epsilon
+\end{cases}
+```
+
+> 第二部分就是计算概率，$`\epsilon`$ 选择探索，选到的概率是$`\frac{1}{|\mathcal{A}|}`$，损失是$`\Delta_a`$
+
+一个改进是，$`\epsilon`$ 随时间衰减。因为探索和利用不是独立的，智能体对环境的了解会越来越多，探索的必要性会降低。
+
+上置信界算法：评估探索和利用，探索本质是不确定性的价值
+
+```math
+Q = \hat{Q}_t(a) + \hat{U}_t(a)
+```
+
+利用Hoeffding 不等式: 
+
+```math
+\mathbb{P}\!\left[\,\mathbb{E}[x] > \bar{x}_t + u\,\right] \leq e^{-2tu^2}, 
+\quad x \in [0,1]
+```
+
+> 这个描述的是一个下界成立的概率，反面就是上界成立的概率, [probability inequalities for sums of bounded random variables](https://www.jstor.org/stable/2282952)
+
+```math
+\mathbb{P}\!\left[\,\mathbb{E}[x] \leq \bar{x}_t + u\,\right] \geq 1 - e^{-2tu^2} = 1 - p \\
+\mathbb{P}\!\left[Q \leq \hat{Q}_t(a) + \hat{U}_t(a)\,\right] \geq 1 - p \\
+Q \leq \hat{Q}_t(a) + \hat{U}_t(a), \text{with probability} \; 1 - p \\
+```
+
+有 $`e^{-2n U^2} = p`$，$`p`$ 是超参，可以取 $`p = \frac{1}{t}`$，则
+
+> 相当于选择上限最大的，潜力最大的
+
+汤普森采样（Thompson sampling）：先假设拉动每根拉杆的奖励服从一个特定的概率分布，然后根据拉动每根拉杆的期望奖励来进行选择。
+
+采用 beta 分布来估计利用和探索，其中不确定性就是宽度
+
+- 不确定性大 → Beta 分布宽 → 偶尔采样出高值 → 促使探索。
+- 不确定性小 → Beta 分布窄 → 高概率靠近真实均值 → 算法稳定利用。
+
+> 也就是用 beta 函数来作为价值预测，综合来看，都是有对价值的评估，也是对动力学的估计。$`\epsilon`$-贪心算法估计的是常量，或者修改为随时间衰减的函数；上置信界算法估计利用不确定性估计上界，Thompson 利用的是采用估计
+
