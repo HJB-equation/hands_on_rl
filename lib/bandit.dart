@@ -1,16 +1,14 @@
+import 'random.dart' as r;
 import 'dart:math';
 
 class Bandit {
   final int n;
   final List<double> qs;
-  final Random random;
   late final double bestQ;
 
-  Bandit(this.n, [int? seed])
-    : qs = List.generate(n, (_) => Random().nextDouble()),
-      random = Random(seed) {
+  Bandit(this.n) : qs = List.generate(n, (_) => r.random.nextDouble()) {
     bestQ = qs.reduce(max);
   }
 
-  int call(int a) => random.nextDouble() < qs[a] ? 1 : 0;
+  int call(int a) => r.random.nextDouble() < qs[a] ? 1 : 0;
 }

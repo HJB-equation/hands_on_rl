@@ -2,12 +2,14 @@
 
 [code](https://github.com/boyu-ai/Hands-on-RL) | [book](https://hrl.boyuai.com/) | [slides](https://hrl.boyuai.com/slides)
 
-参考书：[Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf)  
+参考书：[Reinforcement Learning: An Introduction](http://incompleteideas.net/book/RLbook2020.pdf) | [Reinforcement Learning: An Introduction](https://web.stanford.edu/class/psych209/Readings/SuttonBartoIPRLBook2ndEd.pdf)
 参考课程：  
 - [UCL David Silver RL Course](https://www.davidsilver.uk/teaching/)  
 - [Berkeley Sergey Levine Deep RL Course](http://rail.eecs.berkeley.edu/deeprlcourse/)  
 - [OpenAI DRL Camp](https://sites.google.com/view/deep-rl-bootcamp/lectures)  
 - [RL China Camp](http://rlchina.org/)
+知乎：
+- [大模型中的强化学习](https://zhuanlan.zhihu.com/p/693582342)
 
 ## TLDR
 
@@ -217,4 +219,60 @@ Q \leq \hat{Q}_t(a) + \hat{U}_t(a), \text{with probability} \; 1 - p \\
 - 不确定性小 → Beta 分布窄 → 高概率靠近真实均值 → 算法稳定利用。
 
 > 也就是用 beta 函数来作为价值预测，综合来看，都是有对价值的评估，也是对动力学的估计。$`\epsilon`$-贪心算法估计的是常量，或者修改为随时间衰减的函数；上置信界算法估计利用不确定性估计上界，Thompson 利用的是采用估计
+
+### 03
+
+马尔可夫决策过程（Markov decision process，MDP），用概率去描述环境的动力学：当前状态是未来的充分统计量
+
+从某个状态出发，根据它的状态转移矩阵生成一个状态序列（episode），这个步骤也被叫做采样（sampling）。也就是一条真实的轨迹
+
+马尔可夫过程的基础上加入奖励函数$`r`$和折扣因子$`\gamma`$，就可以得到马尔可夫奖励过程（Markov reward process）。由于是纯演化过错，没法选择，奖励$`R_t`$只和状态有关。（这个相当于是势能）
+
+从第$`t`$时刻状态开始，直到终止状态时，所有奖励的衰减之和称为回报$`G_t`$（Return），这是一个随即变量，会随着采样的轨迹变化。所以，考虑期望，定义为价值函数
+
+```math
+\begin{align*}
+V(s) &= \mathbb{E}[G_t \mid S_t = s] \\
+     &= \mathbb{E}[R_t + \gamma R_{t+1} + \gamma^2 R_{t+2} + \dots \mid S_t = s] \\
+     &= \mathbb{E}[R_t + \gamma (R_{t+1} + \gamma R_{t+2} + \dots) \mid S_t = s] \\
+     &= \mathbb{E}[R_t + \gamma G_{t+1} \mid S_t = s] \\
+     &= \mathbb{E}[R_t + \gamma V(S_{t+1}) \mid S_t = s]\\
+     &= r(s) + \gamma \mathbb{E}[V(S_{t+1}) \mid S_t = s]\\
+     &= r(s) + \gamma \sum_{s'} \mathcal{P}(s' \mid s) V(s')
+\end{align*}
+```
+
+也就是当前价值 = 当前奖励 + 折扣 * 转移到所有下一个状态价值
+
+```math
+\mathcal{V} = \mathcal{R} + \gamma \mathcal{P} \mathcal{V}
+```
+
+
+马尔科夫决策过程（Markov decision process，MDP），相当于可以控制某些参数。此时奖励可以同时取决于状态和动作
+
+策略$`\pi(a|s)`$是一个函数，表示在输入状态$`s`$情况下采取动作$`a`$的概率。当一个策略是确定性策略（deterministic policy）时，它在每个状态时只输出一个确定性的动作，即只有该动作的概率为 1，其他动作的概率为 0；当一个策略是随机性策略（stochastic policy）时，它在每个状态时输出的是关于动作的概率分布，然后根据该分布进行采样就可以得到一个动作。
+
+> 相当于 $`s = a(s)`$，确定性的就用$`\delta`$函数。
+
+价值函数可以这么思考，奖励可以看作是关于状态的势能的差分，所以累加起来的就是势能。因为人是能观察到差分的，因此通过奖励来建模。
+
+就用场来思考，考虑等时线段，如图所示：
+
+也就是说，动作相当于是在分流，因为动作也就被赋予了价值。所以势能等于动作势能的叠加。
+
+```math
+V^\pi(s) = \sum_a \pi(a|s) Q^\pi(s,a)
+```
+
+因此，动作就是当前行为的奖励 + 折扣 * 转移到所有下一个状态的价值
+
+```math
+Q^\pi(s,a) = r(s,a) + \gamma \sum_{s'} \mathcal{P}(s'|s,a) V^\pi(s')
+```
+
+> 事实上计算的时候，也是先计算了状态价值函数，然后计算动作的。先合流，也就是计算转移矩阵$`\pi \cdot P`$
+
+
+因为只是定义了奖励，不同轨迹的回报并不相同，所以势能因策略不同而不同的。之前采样也有轨迹不同，约定用期望来处理。但是现在是有选择的
 
